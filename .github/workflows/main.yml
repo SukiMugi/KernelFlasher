@@ -51,17 +51,9 @@ jobs:
           ./gradlew clean assembleRelease
           find ./app -type f -name "*.apk" -exec bash -c 'mv "$0" ./app/$(basename "$0")' {} \;
 
-
       - name: Upload release
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.buildRelease.outputs.releaseName }}
-          path: "app/build/outputs/apk/release/*.apk"
-
-      - name: Upload release
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: apk
+          name: KernelFlasher
           path: "app/*.apk"
