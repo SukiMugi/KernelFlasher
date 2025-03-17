@@ -40,17 +40,15 @@ fun ColumnScope.SlotContent(
     AnimatedVisibility(!viewModel.isRefreshing) {
         Column {
             Spacer(Modifier.height(5.dp))
-            if (viewModel.isActive) {
-                OutlinedButton(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    shape = RoundedCornerShape(4.dp),
-                    onClick = {
-                        navController.navigate("slot$slotSuffix/flash")
-                    }
-                ) {
-                    Text(stringResource(R.string.flash))
+            OutlinedButton(
+                 modifier = Modifier
+                     .fillMaxWidth(),
+                 shape = RoundedCornerShape(4.dp),
+                 onClick = {
+                     navController.navigate("slot$slotSuffix/flash")
                 }
+             ) {
+                 Text(stringResource(R.string.flash))                
             }
             OutlinedButton(
                 modifier = Modifier
