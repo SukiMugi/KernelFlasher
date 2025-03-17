@@ -49,11 +49,12 @@ jobs:
         id: buildRelease
         run: |
           ./gradlew :app:buildRelease --info
-          echo "releaseName=$(ls app/build/apk/release/*.apk | awk -F '(/|.apk)' '{print $5}')" >> $GITHUB_OUTPUT
+          find ./app -type f -name "*.apk" -exec bash -c 'mv "$0" ./app/$(basename "$0")' {} \;
+
 
       - name: Upload release
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.buildRelease.outputs.releaseName }}
-          path: "app/build/intermediates/project_dex_archive/release/dexBuilderRelease/out/*.apk"
+          path: "app/*.apk"
