@@ -63,5 +63,5 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.buildRelease.outputs.releaseName }}
+          name: apk
           path: "app/*.apk"
