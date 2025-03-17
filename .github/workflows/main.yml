@@ -48,7 +48,7 @@ jobs:
       - name: Build release
         id: buildRelease
         run: |
-          ./gradlew :app:buildRelease --info
+          ./gradlew clean assembleRelease
           find ./app -type f -name "*.apk" -exec bash -c 'mv "$0" ./app/$(basename "$0")' {} \;
 
 
