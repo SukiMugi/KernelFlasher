@@ -47,7 +47,7 @@ fun ColumnScope.SlotContent(
                  onClick = {
                      navController.navigate("slot$slotSuffix/flash")
                 }
-             ) {
+            ) {
                  Text(stringResource(R.string.flash))                
             }
             OutlinedButton(
@@ -68,8 +68,8 @@ fun ColumnScope.SlotContent(
                  onClick = {
                      navController.navigate("slot$slotSuffix/backups")
                 }
-                    ) {
-                 Text(stringResource(R.string.restore))         
+            ) {
+                 Text(stringResource(R.string.restore))                
             }
             OutlinedButton(
                 modifier = Modifier
@@ -126,3 +126,4 @@ fun ColumnScope.SlotContent(
         }
     }
 }
+
