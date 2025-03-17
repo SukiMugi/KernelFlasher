@@ -1,0 +1,60 @@
+name: Main
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest ]
+    if: ${{ !startsWith(github.event.head_commit.message, '[skip ci]') }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: 0
+
+      - name: Gradle wrapper validation
+        uses: gradle/wrapper-validation-action@v3
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Cache gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Gradle prebuild
+        run: |
+          echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
+          ./gradlew prebuild
+
+      - name: Build release
+        id: buildRelease
+        run: |
+          ./gradlew :app:buildRelease
+          echo "releaseName=$(ls app/build/apk/release/*.apk | awk -F '(/|.apk)' '{print $5}')" >> $GITHUB_OUTPUT
+
+      - name: Upload release
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.buildRelease.outputs.releaseName }}
+          path: "app/build/apk/release/*.apk"
