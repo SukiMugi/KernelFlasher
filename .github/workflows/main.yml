@@ -43,7 +43,6 @@ jobs:
 
       - name: Gradle prebuild
         run: |
-          echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
           ./gradlew prebuild
 
       - name: Build release
