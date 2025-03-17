@@ -61,17 +61,15 @@ fun ColumnScope.SlotContent(
             ) {
                 Text(stringResource(R.string.backup))
             }
-            if (viewModel.isActive) {
-                OutlinedButton(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    shape = RoundedCornerShape(4.dp),
-                    onClick = {
-                        navController.navigate("slot$slotSuffix/backups")
-                    }
-                ) {
-                    Text(stringResource(R.string.restore))
+            OutlinedButton(
+                 modifier = Modifier
+                     .fillMaxWidth(),
+                 shape = RoundedCornerShape(4.dp),
+                 onClick = {
+                     navController.navigate("slot$slotSuffix/backups")
                 }
+                    ) {
+                 Text(stringResource(R.string.restore))         
             }
             OutlinedButton(
                 modifier = Modifier
