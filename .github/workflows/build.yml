@@ -51,5 +51,19 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: APK
+          name: release
           path: "app/*.apk"
+
+      - name: Build Debug
+        id: buildDebug
+        run: |
+          find ./app -type f -name "*.apk" -exec rm -f {} \;
+          ./gradlew clean assembleDebug
+          find ./app -type f -name "*.apk" -exec bash -c 'mv "$0" ./app/$(basename "$0")' {} \;
+          
+      - name: Upload Debug
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug
+          path: "app/*.apk"          
