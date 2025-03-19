@@ -47,7 +47,7 @@ jobs:
           ./gradlew clean assembleRelease
           find ./app -type f -name "*.apk" -exec bash -c 'mv "$0" ./app/$(basename "$0")' {} \;
 
-      - name: Upload release
+      - name: Upload Release
         if: success()
         uses: actions/upload-artifact@v4
         with:
