@@ -20,12 +20,10 @@ import com.topjohnwu.superuser.nio.FileSystemManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.ExperimentalSerializationApi
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-@ExperimentalSerializationApi
 class MainViewModel(
     context: Context,
     fileSystemManager: FileSystemManager,
@@ -37,9 +35,8 @@ class MainViewModel(
     val slotSuffix: String
 
     val kernelVersion: String
-    val isAb: Boolean
     val slotA: SlotViewModel
-    val slotB: SlotViewModel?
+    val slotB: SlotViewModel
     val backups: BackupsViewModel
     val updates: UpdatesViewModel
     val reboot: RebootViewModel
@@ -58,34 +55,21 @@ class MainViewModel(
 
     init {
         PartitionUtil.init(context, fileSystemManager)
+        val partitionName = if (fileSystemManager.getFile("/dev/block/by-name/init_boot_a").exists()) "init_boot" else "boot"
+        val bootA = PartitionUtil.findPartitionBlockDevice(context, partitionName, "_a")!!
+        val bootB = PartitionUtil.findPartitionBlockDevice(context, partitionName, "_b")!!
         kernelVersion = Shell.cmd("echo $(uname -r) $(uname -v)").exec().out[0]
         slotSuffix = Shell.cmd("getprop ro.boot.slot_suffix").exec().out[0]
         backups = BackupsViewModel(context, fileSystemManager, navController, _isRefreshing, _backups)
         updates = UpdatesViewModel(context, fileSystemManager, navController, _isRefreshing)
         reboot = RebootViewModel(context, fileSystemManager, navController, _isRefreshing)
-        // https://cs.android.com/android/platform/superproject/+/android-14.0.0_r18:bootable/recovery/recovery.cpp;l=320
-        isAb = slotSuffix.isNotEmpty()
-        if (isAb) {
-            val bootA = PartitionUtil.findPartitionBlockDevice(context, "boot", "_a")!!
-            val bootB = PartitionUtil.findPartitionBlockDevice(context, "boot", "_b")!!
-            val initBootA = PartitionUtil.findPartitionBlockDevice(context, "init_boot", "_a")
-            val initBootB = PartitionUtil.findPartitionBlockDevice(context, "init_boot", "_b")
-            slotA = SlotViewModel(context, fileSystemManager, navController, _isRefreshing, slotSuffix == "_a", "_a", bootA, initBootA, _backups)
-            if (slotA.hasError && slotSuffix == "_a") {
-                _error = slotA.error
-            }
-            slotB = SlotViewModel(context, fileSystemManager, navController, _isRefreshing, slotSuffix == "_b", "_b", bootB, initBootB, _backups)
-            if (slotB.hasError && slotSuffix == "_b") {
-                _error = slotB.error
-            }
-        } else {
-            val boot = PartitionUtil.findPartitionBlockDevice(context, "boot", "")!!
-            val initBoot = PartitionUtil.findPartitionBlockDevice(context, "init_boot", "")
-            slotA = SlotViewModel(context, fileSystemManager, navController, _isRefreshing, true, "", boot, initBoot, _backups)
-            if (slotA.hasError) {
-                _error = slotA.error
-            }
-            slotB = null
+        slotA = SlotViewModel(context, fileSystemManager, navController, _isRefreshing, slotSuffix == "_a", "_a", bootA, _backups)
+        if (slotA.hasError) {
+            _error = slotA.error
+        }
+        slotB = SlotViewModel(context, fileSystemManager, navController, _isRefreshing, slotSuffix == "_b", "_b", bootB, _backups)
+        if (slotB.hasError) {
+            _error = slotB.error
         }
 
         hasRamoops = fileSystemManager.getFile("/sys/fs/pstore/console-ramoops-0").exists()
@@ -95,9 +79,7 @@ class MainViewModel(
     fun refresh(context: Context) {
         launch {
             slotA.refresh(context)
-            if (isAb) {
-                slotB!!.refresh(context)
-            }
+            slotB.refresh(context)
             backups.refresh(context)
         }
     }

@@ -21,9 +21,9 @@ import androidx.navigation.NavController
 import com.github.capntrips.kernelflasher.R
 import com.github.capntrips.kernelflasher.ui.components.SlotCard
 
+@ExperimentalUnitApi
 @ExperimentalAnimationApi
 @ExperimentalMaterial3Api
-@ExperimentalUnitApi
 @Composable
 fun ColumnScope.SlotContent(
     viewModel: SlotViewModel,
@@ -32,7 +32,7 @@ fun ColumnScope.SlotContent(
 ) {
     val context = LocalContext.current
     SlotCard(
-        title = stringResource(if (slotSuffix == "_a") R.string.slot_a else if (slotSuffix == "_b") R.string.slot_b else R.string.slot),
+        title = stringResource(if (slotSuffix == "_a") R.string.slot_a else R.string.slot_b),
         viewModel = viewModel,
         navController = navController,
         isSlotScreen = true
@@ -47,8 +47,8 @@ fun ColumnScope.SlotContent(
                  onClick = {
                      navController.navigate("slot$slotSuffix/flash")
                 }
-            ) {
-                 Text(stringResource(R.string.flash))                
+             ) {
+                 Text(stringResource(R.string.flash))               
             }
             OutlinedButton(
                 modifier = Modifier
@@ -126,4 +126,3 @@ fun ColumnScope.SlotContent(
         }
     }
 }
-

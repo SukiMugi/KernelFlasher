@@ -38,24 +38,25 @@ import java.util.zip.ZipFile
 
 class SlotViewModel(
     context: Context,
-    private val fileSystemManager: FileSystemManager,
+    @Suppress("unused") private val fileSystemManager: FileSystemManager,
     private val navController: NavController,
     private val _isRefreshing: MutableState<Boolean>,
     val isActive: Boolean,
     val slotSuffix: String,
     private val boot: File,
-    private val initBoot: File?,
     private val _backups: MutableMap<String, Backup>
 ) : ViewModel() {
     companion object {
         const val TAG: String = "KernelFlasher/SlotState"
     }
 
+    @Suppress("PropertyName")
     private var _sha1: String? = null
     var kernelVersion: String? = null
     var hasVendorDlkm: Boolean = false
     var isVendorDlkmMapped: Boolean = false
     var isVendorDlkmMounted: Boolean = false
+    @Suppress("PropertyName")
     private val _flashOutput: SnapshotStateList<String> = mutableStateListOf()
     private val _wasFlashSuccess: MutableState<Boolean?> = mutableStateOf(null)
     private val _backupPartitions: SnapshotStateMap<String, Boolean> = mutableStateMapOf()
@@ -65,6 +66,9 @@ class SlotViewModel(
     private val hashAlgorithm: String = "SHA-256"
     private var inInit = true
     private var _error: String? = null
+
+    private val STOCK_MAGISKBOOT = "/data/adb/magisk/magiskboot"
+    private var magiskboot: String = STOCK_MAGISKBOOT
 
     val sha1: String
         get() = _sha1!!
@@ -88,18 +92,14 @@ class SlotViewModel(
     }
 
     fun refresh(context: Context) {
-        if (!isActive) {
-            inInit = true
+        // init magiskboot
+        if (!File(STOCK_MAGISKBOOT).exists()) {
+            magiskboot = context.filesDir.absolutePath + File.separator + "magiskboot"
         }
 
-        val magiskboot = File(context.filesDir, "magiskboot")
         Shell.cmd("$magiskboot unpack $boot").exec()
-        if (initBoot != null) {
-            Shell.cmd("$magiskboot unpack $initBoot").exec()
-        }
 
         val ramdisk = File(context.filesDir, "ramdisk.cpio")
-        val kernel = File(context.filesDir, "kernel")
 
         var vendorDlkm = PartitionUtil.findPartitionBlockDevice(context, "vendor_dlkm", slotSuffix)
         hasVendorDlkm = vendorDlkm != null
@@ -116,18 +116,22 @@ class SlotViewModel(
             }
         }
 
-        if (ramdisk.exists()) {
-            when (Shell.cmd("$magiskboot cpio ramdisk.cpio test").exec().code) {
-                0 -> _sha1 = Shell.cmd("$magiskboot sha1 $boot").exec().out.firstOrNull()
-                1 -> _sha1 = Shell.cmd("$magiskboot cpio ramdisk.cpio sha1").exec().out.firstOrNull()
-                else -> log(context, "Invalid ramdisk in boot.img", shouldThrow = true)
+        val magiskboot = fileSystemManager.getFile(magiskboot)
+        if (magiskboot.exists()) {
+            if (ramdisk.exists()) {
+                when (Shell.cmd("$magiskboot cpio ramdisk.cpio test").exec().code) {
+                    0 -> _sha1 = Shell.cmd("$magiskboot sha1 $boot").exec().out.firstOrNull()
+                    1 -> _sha1 = Shell.cmd("$magiskboot cpio ramdisk.cpio sha1").exec().out.firstOrNull()
+                    else -> log(context, "Invalid boot.img", shouldThrow = true)
+                }
+            } else {
+                // boot.img v4 has no ramdisk!
+                 _sha1 = Shell.cmd("$magiskboot sha1 $boot").exec().out.firstOrNull()
             }
-        } else if (kernel.exists()) {
-            _sha1 = Shell.cmd("$magiskboot sha1 $boot").exec().out.firstOrNull()
+            Shell.cmd("$magiskboot cleanup").exec()
         } else {
-            log(context, "Invalid boot.img, no ramdisk or kernel found", shouldThrow = true)
+            log(context, "magiskboot is missing", shouldThrow = true)
         }
-        Shell.cmd("$magiskboot cleanup").exec()
 
         PartitionUtil.AvailablePartitions.forEach { partitionName ->
             _backupPartitions[partitionName] = true
@@ -172,7 +176,6 @@ class SlotViewModel(
         }
     }
 
-    @Suppress("SameParameterValue")
     private fun uiPrint(message: String) {
         viewModelScope.launch(Dispatchers.Main) {
             _flashOutput.add("ui_print $message")
@@ -193,6 +196,10 @@ class SlotViewModel(
             if (zip.exists()) {
                 zip.delete()
             }
+        }
+        val akHome = File(context.filesDir, "akhome")
+        if (akHome.exists()) {
+            Shell.cmd("rm -r $akHome").exec()
         }
     }
 
@@ -219,7 +226,7 @@ class SlotViewModel(
             val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd--HH-mm"))
             val logName = if (navController.currentDestination!!.route!!.contains("ak3")) {
                 "ak3"
-            } else if (navController.currentDestination!!.route!!.endsWith("/backup")) {
+            } else if (navController.currentDestination!!.route!! == "slot{slotSuffix}/backup") {
                 "backup"
             } else {
                 "flash"
@@ -240,11 +247,7 @@ class SlotViewModel(
 
     @Suppress("FunctionName", "SameParameterValue")
     private fun _getKernel(context: Context) {
-        val magiskboot = File(context.filesDir, "magiskboot")
         Shell.cmd("$magiskboot unpack $boot").exec()
-        if (initBoot != null) {
-            Shell.cmd("$magiskboot unpack $initBoot").exec()
-        }
         val kernel = File(context.filesDir, "kernel")
         if (kernel.exists()) {
             val result = Shell.cmd("strings kernel | grep -E -m1 'Linux version.*#' | cut -d\\  -f3-").exec().out
@@ -394,6 +397,7 @@ class SlotViewModel(
             val jsonFile = backupDir.getChildFile("backup.json")
             val backup = Backup(now, "raw", currentKernelVersion!!, sha1, null, hashes, hashAlgorithm)
             val indentedJson = Json { prettyPrint = true }
+            @Suppress("BlockingMethodInNonBlockingContext")
             jsonFile.outputStream().use { it.write(indentedJson.encodeToString(backup).toByteArray(Charsets.UTF_8)) }
             _backups[now] = backup
             addMessage("Backup $now saved")
@@ -403,6 +407,7 @@ class SlotViewModel(
 
     fun backupZip(context: Context, callback: () -> Unit) {
         launch {
+            @Suppress("BlockingMethodInNonBlockingContext")
             val source = context.contentResolver.openInputStream(flashUri!!)
             if (source != null) {
                 _getKernel(context)
@@ -411,9 +416,11 @@ class SlotViewModel(
                 val jsonFile = backupDir.getChildFile("backup.json")
                 val backup = Backup(now, "ak3", kernelVersion!!, null, flashFilename)
                 val indentedJson = Json { prettyPrint = true }
+                @Suppress("BlockingMethodInNonBlockingContext")
                 jsonFile.outputStream().use { it.write(indentedJson.encodeToString(backup).toByteArray(Charsets.UTF_8)) }
                 val destination = backupDir.getChildFile(flashFilename!!)
                 source.use { inputStream ->
+                    @Suppress("BlockingMethodInNonBlockingContext")
                     destination.outputStream().use { outputStream ->
                         inputStream.copyTo(outputStream)
                     }
@@ -473,7 +480,9 @@ class SlotViewModel(
         }
         val source = backupDir.getChildFile(flashFilename!!)
         val zip = File(context.filesDir, flashFilename!!)
+        @Suppress("BlockingMethodInNonBlockingContext")
         source.newInputStream().use { inputStream ->
+            @Suppress("BlockingMethodInNonBlockingContext")
             zip.outputStream().use { outputStream ->
                 inputStream.copyTo(outputStream)
             }
@@ -488,6 +497,7 @@ class SlotViewModel(
             val name = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
             return@use cursor.getString(name)
         } ?: "ak3.zip"
+        @Suppress("BlockingMethodInNonBlockingContext")
         val source = context.contentResolver.openInputStream(uri)
         val file = File(context.filesDir, flashFilename!!)
         source.use { inputStream ->
@@ -502,19 +512,29 @@ class SlotViewModel(
         if (!isActive) {
             resetSlot()
         }
-        val zip = File(context.filesDir.canonicalPath, flashFilename!!)
+        val zip = File(context.filesDir, flashFilename!!)
         _checkZip(context, zip)
+        val akHome = File(context.filesDir, "akhome")
         try {
             if (zip.exists()) {
+                akHome.mkdir()
                 _wasFlashSuccess.value = false
-                val files = File(context.filesDir.canonicalPath)
-                val flashScript = File(files, "flash_ak3.sh")
-                val result = Shell.Builder.create().setFlags(Shell.FLAG_MOUNT_MASTER or Shell.FLAG_REDIRECT_STDERR).build().newJob().add("F=$files Z=\"$zip\" \$SHELL $flashScript").to(flashOutput).exec()
-                if (result.isSuccess) {
-                    log(context, "Kernel flashed successfully")
-                    _wasFlashSuccess.value = true
+                if (akHome.exists()) {
+                    val updateBinary = File(akHome, "update-binary")
+                    Shell.cmd("unzip -p \"$zip\" META-INF/com/google/android/update-binary > $akHome/update-binary").exec()
+                    if (updateBinary.exists()) {
+                        val result = Shell.Builder.create().setFlags(Shell.FLAG_MOUNT_MASTER or Shell.FLAG_REDIRECT_STDERR).build().newJob().add("AKHOME=$akHome /system/bin/sh $akHome/update-binary 3 1 \"$zip\"").to(flashOutput).exec()
+                        if (result.isSuccess) {
+                            log(context, "Kernel flashed successfully")
+                            _wasFlashSuccess.value = true
+                        } else {
+                            log(context, "Failed to flash zip", shouldThrow = false)
+                        }
+                    } else {
+                        log(context, "Failed to extract update-binary", shouldThrow = true)
+                    }
                 } else {
-                    log(context, "Failed to flash zip", shouldThrow = false)
+                    log(context, "Failed to create temporary folder", shouldThrow = true)
                 }
                 clearTmp(context)
             } else {

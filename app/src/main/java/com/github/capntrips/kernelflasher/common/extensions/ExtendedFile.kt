@@ -16,7 +16,9 @@ object ExtendedFile {
     @Suppress("unused")
     fun ExtendedFile.writeText(text: String, charset: Charset = Charsets.UTF_8): Unit = writeBytes(text.toByteArray(charset))
 
+    @Suppress("MemberVisibilityCanBePrivate")
     fun ExtendedFile.inputStream(): InputStream = newInputStream()
 
+    @Suppress("MemberVisibilityCanBePrivate")
     fun ExtendedFile.outputStream(): OutputStream = newOutputStream()
 }

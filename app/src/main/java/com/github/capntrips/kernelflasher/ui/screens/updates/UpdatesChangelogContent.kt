@@ -15,16 +15,14 @@ import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.github.capntrips.kernelflasher.ui.components.DataCard
-import kotlinx.serialization.ExperimentalSerializationApi
 
-@Suppress("UnusedReceiverParameter")
-@ExperimentalMaterial3Api
-@ExperimentalSerializationApi
+@Suppress("unused")
 @ExperimentalUnitApi
+@ExperimentalMaterial3Api
 @Composable
 fun ColumnScope.UpdatesChangelogContent(
     viewModel: UpdatesViewModel,
-    @Suppress("UNUSED_PARAMETER") ignoredNavController: NavController
+    @Suppress("UNUSED_PARAMETER") navController: NavController
 ) {
     viewModel.currentUpdate?.let { currentUpdate ->
         DataCard(currentUpdate.kernelName)

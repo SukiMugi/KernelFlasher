@@ -16,7 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,8 +41,8 @@ import com.github.capntrips.kernelflasher.ui.components.SlotCard
 import com.github.capntrips.kernelflasher.ui.components.ViewButton
 import com.github.capntrips.kernelflasher.ui.screens.slot.SlotViewModel
 
-@ExperimentalMaterial3Api
 @ExperimentalUnitApi
+@ExperimentalMaterial3Api
 @Composable
 fun ColumnScope.SlotBackupsContent(
     slotViewModel: SlotViewModel,
@@ -51,9 +51,9 @@ fun ColumnScope.SlotBackupsContent(
     navController: NavController
 ) {
     val context = LocalContext.current
-    if (!navController.currentDestination!!.route!!.contains("/backups/{backupId}/restore")) {
+    if (!navController.currentDestination!!.route!!.startsWith("slot{slotSuffix}/backups/{backupId}/restore")) {
         SlotCard(
-            title = stringResource(if (slotSuffix == "_a") R.string.slot_a else if (slotSuffix == "_b") R.string.slot_b else R.string.slot),
+            title = stringResource(if (slotSuffix == "_a") R.string.slot_a else R.string.slot_b),
             viewModel = slotViewModel,
             navController = navController,
             isSlotScreen = true,
@@ -63,7 +63,7 @@ fun ColumnScope.SlotBackupsContent(
         if (backupsViewModel.currentBackup != null && backupsViewModel.backups.containsKey(backupsViewModel.currentBackup)) {
             val currentBackup = backupsViewModel.backups.getValue(backupsViewModel.currentBackup!!)
             DataCard(backupsViewModel.currentBackup!!) {
-                val cardWidth = remember { mutableIntStateOf(0) }
+                val cardWidth = remember { mutableStateOf(0) }
                 DataRow(stringResource(R.string.backup_type), currentBackup.type, mutableMaxWidth = cardWidth)
                 DataRow(stringResource(R.string.kernel_version), currentBackup.kernelVersion, mutableMaxWidth = cardWidth, clickable = true)
                 if (currentBackup.type == "raw") {
@@ -77,7 +77,7 @@ fun ColumnScope.SlotBackupsContent(
                         mutableMaxWidth = cardWidth
                     )
                     if (currentBackup.hashes != null) {
-                        val hashWidth = remember { mutableIntStateOf(0) }
+                        val hashWidth = remember { mutableStateOf(0) }
                         DataSet(stringResource(R.string.hashes)) {
                             for (partitionName in PartitionUtil.PartitionNames) {
                                 val hash = currentBackup.hashes.get(partitionName)
@@ -120,7 +120,7 @@ fun ColumnScope.SlotBackupsContent(
                                 onClick = {
                                     slotViewModel.flashAk3(context, backupsViewModel.currentBackup!!, currentBackup.filename!!)
                                     navController.navigate("slot$slotSuffix/backups/${backupsViewModel.currentBackup!!}/flash/ak3") {
-                                        popUpTo("slot$slotSuffix")
+                                        popUpTo("slot{slotSuffix}")
                                     }
                                 }
                             ) {
@@ -167,7 +167,7 @@ fun ColumnScope.SlotBackupsContent(
                 )
             }
         }
-    } else if (navController.currentDestination!!.route!!.endsWith("/backups/{backupId}/restore")) {
+    } else if (navController.currentDestination!!.route!! == "slot{slotSuffix}/backups/{backupId}/restore") {
         DataCard (stringResource(R.string.restore))
         Spacer(Modifier.height(5.dp))
         val disabledColor = ButtonDefaults.buttonColors(
@@ -216,7 +216,7 @@ fun ColumnScope.SlotBackupsContent(
             onClick = {
                 backupsViewModel.restore(context, slotSuffix)
                 navController.navigate("slot$slotSuffix/backups/${backupsViewModel.currentBackup!!}/restore/restore") {
-                    popUpTo("slot$slotSuffix")
+                    popUpTo("slot{slotSuffix}")
                 }
             },
             enabled = currentBackup.hashes == null || (PartitionUtil.PartitionNames.none { currentBackup.hashes.get(it) != null && backupsViewModel.backupPartitions[it] == null } && backupsViewModel.backupPartitions.filter { it.value }.isNotEmpty())

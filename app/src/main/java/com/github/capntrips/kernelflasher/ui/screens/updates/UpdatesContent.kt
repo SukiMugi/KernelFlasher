@@ -12,7 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,10 +25,8 @@ import com.github.capntrips.kernelflasher.common.types.room.updates.DateSerializ
 import com.github.capntrips.kernelflasher.ui.components.DataCard
 import com.github.capntrips.kernelflasher.ui.components.DataRow
 import com.github.capntrips.kernelflasher.ui.components.ViewButton
-import kotlinx.serialization.ExperimentalSerializationApi
 
 @ExperimentalMaterial3Api
-@ExperimentalSerializationApi
 @Composable
 fun ColumnScope.UpdatesContent(
     viewModel: UpdatesViewModel,
@@ -51,7 +49,7 @@ fun ColumnScope.UpdatesContent(
                     }
                 }
             ) {
-                val cardWidth = remember { mutableIntStateOf(0) }
+                val cardWidth = remember { mutableStateOf(0) }
                 DataRow(stringResource(R.string.version), update.kernelVersion, mutableMaxWidth = cardWidth)
                 DataRow(stringResource(R.string.date_released), DateSerializer.formatter.format(update.kernelDate), mutableMaxWidth = cardWidth)
                 DataRow(

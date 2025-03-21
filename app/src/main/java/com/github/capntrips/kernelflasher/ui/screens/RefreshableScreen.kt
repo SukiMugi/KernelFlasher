@@ -17,12 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,11 +34,11 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.github.capntrips.kernelflasher.R
 import com.github.capntrips.kernelflasher.ui.screens.main.MainViewModel
-import kotlinx.serialization.ExperimentalSerializationApi
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.SwipeRefreshIndicator
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
-@ExperimentalMaterialApi
 @ExperimentalMaterial3Api
-@ExperimentalSerializationApi
 @Composable
 fun RefreshableScreen(
     viewModel: MainViewModel,
@@ -52,10 +48,6 @@ fun RefreshableScreen(
 ) {
     val statusBar = WindowInsets.statusBars.only(WindowInsetsSides.Top).asPaddingValues()
     val navigationBars = WindowInsets.navigationBars.asPaddingValues()
-    val context = LocalContext.current
-    val state = rememberPullRefreshState(viewModel.isRefreshing, onRefresh = {
-        viewModel.refresh(context)
-    })
     Scaffold(
         topBar = {
             Box(
@@ -93,11 +85,24 @@ fun RefreshableScreen(
             }
         }
     ) { paddingValues ->
-        Box(
+        val context = LocalContext.current
+        SwipeRefresh(
             modifier = Modifier
                 .padding(paddingValues)
-                .pullRefresh(state, swipeEnabled)
                 .fillMaxSize(),
+            state = rememberSwipeRefreshState(viewModel.isRefreshing),
+            swipeEnabled = swipeEnabled,
+            // TODO: move onRefresh to signature?
+            onRefresh = { viewModel.refresh(context) },
+            indicator = { state, trigger ->
+                SwipeRefreshIndicator(
+                    state = state,
+                    refreshTriggerDistance = trigger,
+                    backgroundColor = MaterialTheme.colorScheme.background,
+                    contentColor = MaterialTheme.colorScheme.primaryContainer,
+                    scale = true
+                )
+            }
         ) {
             Column(
                 modifier = Modifier
@@ -105,14 +110,6 @@ fun RefreshableScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
                 content = content
-            )
-            PullRefreshIndicator(
-                viewModel.isRefreshing,
-                state = state,
-                modifier = Modifier.align(Alignment.TopCenter),
-                backgroundColor = MaterialTheme.colorScheme.background,
-                contentColor = MaterialTheme.colorScheme.primaryContainer,
-                scale = true
             )
         }
     }
