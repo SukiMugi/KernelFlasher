@@ -36,7 +36,7 @@ android {
         compose true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion '1.5.3'
+        kotlinCompilerExtensionVersion compiler_version
     }
     packagingOptions {
         resources {
@@ -47,7 +47,7 @@ android {
 }
 
 dependencies {
-    implementation "androidx.activity:activity-compose:${project.activity_version}"
+    implementation "androidx.activity:activity-compose:$activity_version"
     implementation "androidx.appcompat:appcompat:$appcompat_version"
     implementation "androidx.compose.material3:material3:$material3_version"
     implementation "androidx.compose.foundation:foundation:$compose_version"
